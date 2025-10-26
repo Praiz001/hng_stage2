@@ -1,184 +1,323 @@
-# HNG Stage 1 – String Analyzer API
+# Country Currency & Exchange API
 
-A REST API for analyzing and querying strings with in-memory storage. Supports validation, filtering, and natural-language-style filters.
+A RESTful API that fetches country data from external APIs, stores it in a database, and provides CRUD operations with currency exchange rate calculations and GDP estimation.
 
 ## Features
 
-- Analyze and store strings (palindrome, length, word count, SHA-256, frequency map)
-- Get a single string by value
-- List and filter all strings via query params
-- Natural language filter parsing (e.g., "single word palindromic")
+- **Country Data Management**: Fetch, store, and manage country information
+- **Currency Exchange Integration**: Real-time exchange rate data from external APIs
+- **GDP Estimation**: Calculate estimated GDP using population and exchange rates
+- **Image Generation**: Generate summary images with country statistics
+- **CRUD Operations**: Full Create, Read, Update, Delete functionality
+- **Filtering & Sorting**: Query countries by region, currency, and sort by GDP
+- **Robust Error Handling**: Individual country error handling
 
 ## Tech Stack
 
-- Node.js, Express, TypeScript
-- Joi (validation)
-- CORS
-- Knex + pg (prepared, optional; currently not used)
-- Axios (HTTP helper, optional)
+- **Runtime**: Node.js with TypeScript
+- **Framework**: Express.js
+- **Database**: MySQL
+- **Query Builder**: Knex.js
+- **Validation**: Joi
+- **Image Processing**: Canvas API & Sharp
+- **HTTP Client**: Axios
 
-## Requirements
+## Prerequisites
 
-- Node.js 18+ (recommended)
-- npm 9+
+Before you begin, ensure you have the following installed:
 
-## Setup
+- Node.js (v14 or higher)
+- npm or yarn
+- MySQL database (local or remote)
 
-### 1) Clone and install
+## Installation
 
-```bash
-git clone https://github.com/Praiz001/hng_stage1/
-cd stage_1
-npm install
-```
+1. **Clone the repository**
 
-### 2) Environment variables
+   ```bash
+   git clone <https://github.com/Praiz001/hng_stage2>
+   cd stage_2
+   ```
 
-Create a `.env` file in the project root:
+2. **Install dependencies**
 
-```bash
-# Server
-PORT=4000
-CORS_ORIGIN=*
+   ```bash
+   npm install
+   ```
 
-# Optional
-# DATABASE_URL=postgres://user:password@host:5432/dbname
-```
+3. **Set up environment variables**
 
-### 3) Run locally
+   Create a `.env` file in the root directory and add the following variables:
 
-- **Dev (watch):**
+   ```env
+   # Server Configuration
+   PORT=4000
+   NODE_ENV=development
+
+   # Database Configuration
+   DB_HOST=localhost
+   DB_PORT=3306
+   DB_USER=your_mysql_username
+   DB_PASS=your_mysql_password
+   DB_NAME=your_database_name
+
+   # SSL Configuration (optional, for cloud databases)
+   DB_SSL_CA=/path/to/certificate.crt
+
+   # CORS Configuration (optional)
+   CORS_ORIGIN=*
+   ```
+
+4. **Create the database**
+
+   ```bash
+   # Connect to MySQL and create the database
+   mysql -u root -p
+   CREATE DATABASE your_database_name;
+   ```
+
+5. **Run database migrations**
+   ```bash
+   npm run migrate
+   ```
+   This will create the necessary tables in your database.
+
+## Running the Application
+
+### Development Mode
+
+Run the application in development mode with auto-reload:
+
 ```bash
 npm run dev
 ```
 
-- **Build and start:**
-```bash
-npm run build
-npm start
+### Production Mode
+
+1. Build the TypeScript code:
+
+   ```bash
+   npm run build
+   ```
+
+2. Start the server:
+   ```bash
+   npm start
+   ```
+
+The server will start on `http://localhost:4000` (or the port specified in your `.env` file).
+
+## API Endpoints
+
+### 1. Refresh Countries Data
+
+**POST** `/countries/refresh`
+
+Fetches latest country data from external APIs, calculates exchange rates and GDP estimates, and stores them in the database.
+
+**Response:**
+
+```json
+{
+  "status": "success",
+    "message": "Countries data refreshed successfully"
+}
 ```
 
-Server runs on http://localhost:4000 by default.
+### 2. Get All Countries
+
+**GET** `/countries`
+
+Retrieve all countries with optional filters and sorting.
+
+**Query Parameters:**
+
+- `region` (optional): Filter countries by region (e.g., "Europe", "Africa")
+- `currency` (optional): Filter countries by currency code (e.g., "USD", "EUR")
+- `sort` (optional): Sort countries by GDP in descending order (value: "gdp_desc")
+
+**Example:**
+
+```bash
+GET /countries?region=Europe&sort=gdp_desc
+GET /countries?currency=USD
+```
+
+**Response:**
+
+```json
+[
+  {
+    "id": 1,
+    "name": "United States",
+    "capital": "Washington, D.C.",
+    "region": "Americas",
+    "population": 328239523,
+    "currency_code": "USD",
+    "exchange_rate": 1.0,
+    "estimated_gdp": 3282395230,
+    "flag_url": "https://flagcdn.com/us.svg",
+    "last_refreshed_at": "2024-01-15T10:30:00.000Z"
+  }
+]
+```
+
+### 3. Get Country by Name
+
+**GET** `/countries/:name`
+
+Retrieve specific country details by name.
+
+**Example:**
+
+```bash
+GET /countries/United States
+```
+
+**Response:**
+
+```json
+{
+  "id": 1,
+  "name": "United States",
+  "capital": "Washington, D.C.",
+  "region": "Americas",
+  "population": 328239523,
+  "currency_code": "USD",
+  "exchange_rate": 1.0,
+  "estimated_gdp": 3282395230,
+  "flag_url": "https://flagcdn.com/us.svg",
+  "last_refreshed_at": "2024-01-15T10:30:00.000Z"
+}
+```
+
+### 4. Delete Country
+
+**DELETE** `/countries/:name`
+
+Delete a country from the database by name.
+
+**Example:**
+
+```bash
+DELETE /countries/United States
+```
+
+**Response:**
+
+```json
+{
+  "status": success,
+  "message": "Country deleted successfully"
+}
+```
+
+### 5. Get Summary Image
+
+**GET** `/countries/image`
+
+Returns a PNG image showing country data summary including total countries and top 5 GDP countries.
+
+**Response:** Binary PNG image
+
+### 6. Get Global Refresh Status
+
+**GET** `/status`
+
+Get the status of the last global data refresh.
+
+**Response:**
+
+```json
+{
+  "last_refreshed_at": "2024-01-15T10:30:00.000Z",
+  "total_countries": 195
+}
+```
+
+## External APIs
+
+The application uses the following external APIs:
+
+1. **REST Countries API** (`https://restcountries.com`)
+
+   - Fetches country data including name, capital, region, population, and flag
+
+2. **Exchange Rate API** (`https://open.er-api.com`)
+   - Fetches currency exchange rates for GDP calculations
 
 ## Scripts
 
-- `npm run dev`: Start with nodemon (ts-node)
-- `npm run build`: Compile TypeScript to `dist/`
-- `npm start`: Run compiled server from `dist/`
-- `npm run migrate`: Run Knex migrations (if DB is enabled)
+- `npm run dev` - Start development server with hot reload
+- `npm run build` - Compile TypeScript to JavaScript
+- `npm start` - Start production server
+- `npm run migrate` - Run database migrations
 
-## API
+## Environment Variables
 
-Base URL: `http://localhost:${PORT}` (default 4000)
+### Required Variables
 
-### 1) Analyze and store a string
+- `DB_HOST` - MySQL database host
+- `DB_PORT` - MySQL database port (default: 3306)
+- `DB_USER` - MySQL username
+- `DB_PASS` - MySQL password
+- `DB_NAME` - MySQL database name
 
-**POST** `/strings`
+### Optional Variables
 
-- **Body:**
-```json
-{ "value": "racecar" }
-```
-
-- **Success:** 201 Created
-- **Errors:**
-  - 400 Bad Request: Invalid request body or missing "value" field
-  - 422 Unprocessable Entity: Invalid data type for "value" (must be string)
-
-### 2) Get a string by value
-
-**GET** `/strings/:string_value`
-
-- **Example:** `/strings/racecar`
-- **Success:** 200 OK
-- **Errors:**
-  - 400 Bad Request (if param is not a string)
-  - 404 Not Found
-
-### 3) Get all strings with filtering
-
-**GET** `/strings?is_palindrome=true&min_length=5&max_length=20&word_count=2&contains_character=a`
-
-- **Query params:**
-  - `is_palindrome`: boolean (true/false)
-  - `min_length`: integer
-  - `max_length`: integer
-  - `word_count`: integer
-  - `contains_character`: string (1 char)
-
-- **Success:** 200 OK
-- **Empty:** 204 No Content (returns `{ data: [] }`)
-- **Error:** 400 Bad Request (invalid parameter values or unexpected parameters)
-
-### 4) Filter by natural language
-
-**GET** `/strings/filter-by-natural-language?query=single%20word%20palindromic%20strings`
-
-- **Examples that should parse:**
-  - `single word palindromic`
-  - `longer than 10 characters`
-  - `palindromic strings that contain the first vowel`
-  - `containing the letter z`
-
-- **Conflicts result in:**  422 Unprocessable Entity
-- **Unable to parse query result in:**  400 Bad Request
-
-### 5) Delete a string by value
-
-**DELETE** `/strings/:string_value`
-
-- **Success:** 204 No Content
-- **Errors:** 400, 404
-
-## Curl Examples
-
-- **Analyze a string:**
-```bash
-curl -X POST http://localhost:4000/strings \
-  -H "Content-Type: application/json" \
-  -d '{"value":"racecar"}'
-```
-
-- **Get by value:**
-```bash
-curl http://localhost:4000/strings/racecar
-```
-
-- **Filtered list:**
-```bash
-curl "http://localhost:4000/strings?is_palindrome=true&min_length=5"
-```
-
-- **Natural language filter:**
-```bash
-curl "http://localhost:4000/strings/filter-by-natural-language?query=single%20word%20palindromic%20strings"
-```
+- `PORT` - Server port (default: 4000)
+- `NODE_ENV` - Environment mode (default: development)
+- `CORS_ORIGIN` - CORS allowed origins (default: \*)
+- `DB_SSL_CA` - Path to SSL certificate file (for cloud databases)
 
 ## Dependencies
 
-- **Runtime:**
-  - express, cors, dotenv, joi, axios
-  - knex, pg (optional if you enable DB)
+### Production Dependencies
 
-- **Dev:**
-  - typescript, ts-node, nodemon
-  - @types/node, @types/express, @types/cors
+- `axios` - HTTP client for external API calls
+- `canvas` - Canvas API for image generation
+- `cors` - CORS middleware
+- `dotenv` - Environment variable management
+- `express` - Web framework
+- `joi` - Schema validation
+- `knex` - SQL query builder
+- `mysql2` - MySQL driver
+- `sharp` - Image processing
 
-**Install (already in package.json):**
-```bash
-npm install
-```
+### Development Dependencies
 
-## Project Structure
+- `@types/cors` - TypeScript types for CORS
+- `@types/express` - TypeScript types for Express
+- `@types/node` - TypeScript types for Node.js
+- `nodemon` - Development server with hot reload
+- `ts-node` - TypeScript execution for Node.js
+- `typescript` - TypeScript compiler
 
-- `src/app.ts`: Express app and middleware
-- `src/server.ts`: Server bootstrap
-- `src/routes/index.ts`: Route definitions
-- `src/controllers/index.ts`: Controllers
-- `src/utils/stringAnalyzer.ts`: Utility functions and NL query parsing
-- `src/services/index.ts`: In-memory data operations
+## Error Handling
+
+The API provides comprehensive error handling:
+
+- Individual country errors don't stop the entire refresh process
+- Validation errors for invalid query parameters
+- Proper HTTP status codes
+- Detailed error messages in responses
+
+## Validation
+
+The API validates:
+
+- Query parameters (region, currency, sort)
+- Data types and formats
+- Country names and identifiers
+- External API responses
 
 ## Notes
 
-- Storage is in-memory (data resets on restart)
-- Route order matters; specific routes come before parameterized ones
+- The application fetches data from external APIs and may be rate-limited
+- First-time refresh may take several minutes depending on the number of countries
+- Exchange rates and GDP estimates are calculated using the latest available data
+- The summary image is generated and cached in the `cache/` directory
+
+## License
+
+ISC
