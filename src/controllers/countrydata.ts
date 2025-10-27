@@ -244,7 +244,7 @@ const countriesDataController = {
 
     getCountriesSummaryImage: async (req: Request, res: Response) => {
         try {
-            const imagePath = path.join(__dirname, "../../cache/summary.png");
+            const imagePath = path.join(process.cwd(), 'cache', 'summary.png');
 
             // if image does not exist
             if (!fs.existsSync(imagePath)) {

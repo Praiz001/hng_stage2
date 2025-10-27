@@ -1,6 +1,8 @@
 import { Country } from "../models/country";
 import sharp from 'sharp';
 import { createCanvas, loadImage } from 'canvas';
+import path from "path";
+import fs from 'fs';
 
 
 /**
@@ -84,13 +86,13 @@ export const generateSummaryImage = async (data: { total_countries: number, last
             .toBuffer();
 
         // check if cache directory exists
-        const fs = require('fs');
-        if (!fs.existsSync('cache')) {
-            fs.mkdirSync('cache');
+        const cacheDir = path.join(process.cwd(), 'cache');
+        if (!fs.existsSync(cacheDir)) {
+            fs.mkdirSync(cacheDir);
         }
 
         // Save the optimized image
-        fs.writeFileSync('cache/summary.png', optimizedBuffer);
+        fs.writeFileSync(path.join(cacheDir, 'summary.png'), optimizedBuffer);
         return true;
     } catch (error) {
         console.error('Error generating image:', error);

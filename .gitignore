@@ -1,6 +1,7 @@
 node_modules
 dist
 
+
 # SSL certificates
 *.pem
 *.crt
@@ -13,4 +14,4 @@ ca.pem
 .env.production
 
 # Cache directory
-cache/
+# cache/
