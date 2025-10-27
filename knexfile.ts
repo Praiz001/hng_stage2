@@ -13,9 +13,11 @@ const config: { [key: string]: Knex.Config } = {
             user: process.env.DB_USER,
             password: process.env.DB_PASS,
             database: process.env.DB_NAME,
-            ssl: {
-                ca: process.env.DB_SSL_CA ? fs.readFileSync(process.env.DB_SSL_CA) : undefined,
-            }
+            ssl: process.env.DB_SSL_CA ? {
+                    ca: Buffer.from(process.env.DB_SSL_CA, 'base64'),
+                    rejectUnauthorized: false
+                }
+                : false
         },
         migrations: {
             directory: "./src/db/migrations",
@@ -27,3 +29,7 @@ const config: { [key: string]: Knex.Config } = {
 };
 
 export default config;
+
+// ssl: {
+//     ca: process.env.DB_SSL_CA ? fs.readFileSync(process.env.DB_SSL_CA) : undefined,
+// }
