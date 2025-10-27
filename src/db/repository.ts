@@ -117,7 +117,7 @@ export class Repository<T> {
      * @param data - the data you want to update
      * @param where - the condition under which to update
      */
-    async updateDataWhere(data: Partial<T>, where: Partial<T>): Promise<number> {
+    async updateDataWhere(where: Partial<T>, data: Partial<T> ): Promise<number> {
         const query = getDBTable(this.tableName).where(where).update(data);
         const id = await query;
         return id;
