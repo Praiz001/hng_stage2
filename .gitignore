@@ -15,4 +15,4 @@ ca.pem
 .env.production
 
 # Cache directory
-# cache/
+cache/

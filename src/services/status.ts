@@ -11,19 +11,20 @@ const statusService = {
         return last_refreshed_at ?? null
     },
 
-    createLastRefreshedAt: async (total_countries: number) => {
+    createLastRefreshedAt: async (data: { total_countries: number, last_refreshed_at: string }) => {
         const createdLastRefreshedAt = await globalRefreshRepository.insert({
             name: 'global_refresh',
-            total_countries: total_countries,
-            last_refreshed_at: new Date().toISOString(),
+            total_countries: data.total_countries,
+            last_refreshed_at: data.last_refreshed_at,
         });
         return createdLastRefreshedAt ?? null;
     },
 
-    updateLastRefreshedAt: async (total_countries: number) => {
-        const updatedLastRefreshedAt = await globalRefreshRepository.updateDataWhere({ name: 'global_refresh' }, {
-            total_countries: total_countries,
-            last_refreshed_at: new Date().toISOString(),
+    updateLastRefreshedAt: async (data: { total_countries: number, last_refreshed_at: string }) => {
+        const updatedLastRefreshedAt = await globalRefreshRepository.updateDataWhere({ name: 'global_refresh'}, {
+            total_countries: data.total_countries,
+            last_refreshed_at: data.last_refreshed_at,
+            name: 'global_refresh',
         });
         return updatedLastRefreshedAt ?? null;
     }
