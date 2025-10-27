@@ -19,25 +19,22 @@ const countriesDataService = {
 
             return countriesData;
         } catch (error) {
-            // console.error('Error getting countries data:', error);
+            console.error('Countries API error:', error);
             return null;
         }
     },
 
-    getCountryExchangeRate: async (countryCode: string) => {
+    getCountryExchangeRate: async () => {
 
         try {
-            const url = `https://open.er-api.com/v6/latest/${countryCode}`
+            const url = `https://open.er-api.com/v6/latest/USD`
             const response = await axios.get(url);
 
-            const exchangeRateData: number | undefined = response.data.rates[countryCode];
-            if (!exchangeRateData) {
-                return null
-            }
+            const exchangeRateData: Record<string, number> = response.data.rates;
 
             return exchangeRateData;
         } catch (error) {
-            // console.error('Error getting country exchange rate:', error);
+            console.error('Exchange rate API error:', error);
             return null;
         }
     },
@@ -52,7 +49,7 @@ const countriesDataService = {
         }
     },
 
-    updateCountryData: async (country: Country) => {
+    updateCountryRecord: async (country: Country) => {
         try {
             const updatedCountry = await countryRepository.updateDataWhere({ name: country.name }, {
                 name: country.name,
@@ -63,7 +60,7 @@ const countriesDataService = {
                 exchange_rate: country.exchange_rate,
                 estimated_gdp: country.estimated_gdp,
                 flag_url: country.flag_url,
-                last_refreshed_at: new Date().toISOString(),
+                last_refreshed_at: country.last_refreshed_at,
             });
             return updatedCountry;
         } catch (error) {
@@ -72,7 +69,7 @@ const countriesDataService = {
         }
     },
 
-    insertCountryData: async (country: Country) => {
+    insertCountryRecord: async (country: Country) => {
         try {
             const insertedCountry = await countryRepository.insert({
                 name: country.name,
@@ -83,7 +80,7 @@ const countriesDataService = {
                 exchange_rate: country.exchange_rate,
                 estimated_gdp: country.estimated_gdp,
                 flag_url: country.flag_url,
-                last_refreshed_at: new Date().toISOString(),
+                last_refreshed_at: country.last_refreshed_at,
             });
 
             return insertedCountry;

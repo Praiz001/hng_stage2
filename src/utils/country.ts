@@ -42,8 +42,9 @@ export const generateSummaryImage = async (data: { total_countries: number, last
                 <text x="50" y="210" font-family="Arial" font-size="18" font-weight="bold" fill="#212529">Top 5 GDP Countries:</text>
                 
                 <!-- Top 5 Countries List -->
-                ${data.top5_gdp_countries.map((country: any, index: number) =>
-            `<text x="70" y="${240 + index * 25}" font-family="Arial" font-size="16" fill="#495057">${index + 1}. ${country.name} - $${country.estimated_gdp.toLocaleString()}</text>`
+                ${data.top5_gdp_countries.map((country: Country, index: number) =>
+            `<text x="70" y="${240 + index * 25}" font-family="Arial" font-size="16" fill="#495057">
+                    ${index + 1}. ${country.name} - $${country.estimated_gdp?.toLocaleString() ?? '0.00'}</text>`
         ).join('')}
             </svg>
         `;

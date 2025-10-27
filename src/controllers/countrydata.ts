@@ -14,11 +14,6 @@ import fs from "fs";
 const countriesDataController = {
 
     refreshCountriesData: async (req: Request, res: Response) => {
-        let refreshedCountries: Country[] = [];
-
-        let successCount = 0;
-        let errorCount = 0;
-        const errors: string[] = [];
 
         try {
             //get countries data from ext API
@@ -28,109 +23,117 @@ const countriesDataController = {
                     .status(HttpStatusCode.ServiceUnavailable)
                     .json(errorResponse({
                         error: "External data source unavailable",
-                        details: "Could not fetch data from countries API"
+                        details: `Could not fetch data from countries API`
                     }));
             }
 
+            //get exchange rate data from ext API
+            const exchangeRateResp = await countriesDataService.getCountryExchangeRate();
+            if (!exchangeRateResp) {
+                return res
+                    .status(HttpStatusCode.ServiceUnavailable)
+                    .json(errorResponse({
+                        error: "External data source unavailable",
+                        details: `Could not fetch data from exchange rate API`
+                    }));
+            }
+
+
             //process each country data
+            const processedCountries = [];
             for (const country of countriesExtData) {
-                try {
-                    let currency_code: string | null = null;
-                    let exchange_rate: number | null = null;
-                    let estimated_gdp: number | null = 0;
 
-                    //set currency code and exchange rate
-                    if (!country.currencies || country.currencies.length === 0) {
-                        // No currencies
-                        currency_code = null;
-                        exchange_rate = null;
-                        estimated_gdp = 0;
+                //get country data
+                const countryName = country.name || 'country';
+                const currencies = country.currencies || [];
+                const population = country.population || 0;
+                const region = country.region || null;
+                const capital = country.capital || null;
+                const flag_url = country.flag || null;
+                const refreshedAt = new Date().toISOString()
 
-                    } else {
-                        currency_code = country.currencies[0].code;
+                // derived country data
+                let currencyCode: string | null = null;
+                let exchangeRate: number | null = null;
+                let estimatedGdp: number | null = null;
 
-                        //get exchange rate for the country
-                        const exchangeRateResp = await countriesDataService.getCountryExchangeRate(currency_code);
+                if (currencies.length > 0) {
+                    currencyCode = currencies[0].code;
 
-                        if (!exchangeRateResp) {
-                            estimated_gdp = null;
-                            exchange_rate = null;
-                        } else {
-                            //set exchange rate
-                            exchange_rate = exchangeRateResp;
-
-                            //calculate estimated gdp for the country
-                            estimated_gdp = calculateCountryGdp(country.population, exchange_rate);
-                        }
+                    // check if currency exist in exchange rates
+                    if (exchangeRateResp[currencyCode]) {
+                        exchangeRate = exchangeRateResp[currencyCode];
+                        //calc estimated gdp for the country
+                        estimatedGdp = calculateCountryGdp(population, exchangeRate);
+                    } else { // currency not found in exchange rates
+                        exchangeRate = null;
+                        estimatedGdp = null;
                     }
+                }
 
-                    // Create country data for insert/update
-                    const countryDataForInsert: Country = {
-                        name: country.name,
-                        capital: country.capital || null,
-                        region: country.region,
-                        population: country.population,
-                        currency_code: currency_code,
-                        exchange_rate: exchange_rate,
-                        estimated_gdp: estimated_gdp,
-                        flag_url: country.flag,
-                        last_refreshed_at: new Date().toISOString(),
-                    }
+                //country record to insert
+                const countryRecord: Country = {
+                    name: countryName,
+                    currency_code: currencyCode,
+                    exchange_rate: exchangeRate,
+                    population,
+                    region,
+                    capital,
+                    estimated_gdp: estimatedGdp,
+                    flag_url,
+                    last_refreshed_at: refreshedAt
+                };
 
-                    //add to countries array
-                    refreshedCountries.push(countryDataForInsert);
+                //store processed
+                processedCountries.push(countryRecord);
 
-                    //check if country already exists in database
-                    const countryExists = await countriesDataService.checkIfCountryExists(countryDataForInsert.name);
-                    if (countryExists) { //update country data
-                        await countriesDataService.updateCountryData(countryDataForInsert);
-                    } else { //insert country data
-                        await countriesDataService.insertCountryData(countryDataForInsert);
-                    }
-
-                    successCount++;
-                } catch (countryError: any) {
-                    errorCount++;
-                    errors.push(`Failed to process ${country.name}: ${countryError?.message ?? 'Unknown error'}`);
-                    console.error(`Error processing country ${country.name}:`, countryError);
-
-                    // Continue processing other countries
-                    continue;
+                //insert/update country record
+                const countryExists = await countriesDataService.checkIfCountryExists(countryRecord.name);
+                if (countryExists) {
+                    await countriesDataService.updateCountryRecord(countryRecord);
+                } else {
+                    await countriesDataService.insertCountryRecord(countryRecord);
                 }
             }
 
             // Update global refresh timestamp
             try {
                 const lastRefreshedAt = await globalRefreshService.getLastRefreshedAt();
+                const currentTimestamp = new Date().toISOString();
+                let updatedTimestamp;
                 if (!lastRefreshedAt) {
-                    await globalRefreshService.createLastRefreshedAt(countriesExtData.length);
+                    await globalRefreshService.createLastRefreshedAt({
+                        total_countries: processedCountries.length,
+                        last_refreshed_at: currentTimestamp
+                    });
+                    updatedTimestamp = await globalRefreshService.getLastRefreshedAt();
                 } else {
-                    await globalRefreshService.updateLastRefreshedAt(countriesExtData.length);
+                    await globalRefreshService.updateLastRefreshedAt({
+                        total_countries: processedCountries.length,
+                        last_refreshed_at: currentTimestamp
+                    });
+                    updatedTimestamp = await globalRefreshService.getLastRefreshedAt();
+                }
+
+                // Generate summary image
+                if (updatedTimestamp) {
+                    try {
+                        const generatedImage = await generateSummaryImage({
+                            total_countries: processedCountries.length,
+                            top5_gdp_countries: getTop5GdpCountries(processedCountries),
+                            last_refreshed_at: updatedTimestamp.last_refreshed_at,
+                        });
+
+                        if (!generatedImage) {
+                            throw new Error('Failed to generate image');
+                        }
+                    } catch (imageError) {
+                        console.error('Error generating summary image:', imageError);
+                    }
                 }
             } catch (refreshError) {
                 console.error('Error updating global refresh timestamp:', refreshError);
-                errors.push('Failed to update global refresh timestamp');
             }
-
-            // Generate summary image
-            try {
-                const generatedImage = await generateSummaryImage({
-                    total_countries: countriesExtData.length,
-                    top5_gdp_countries: getTop5GdpCountries(refreshedCountries),
-                    last_refreshed_at: new Date().toISOString(),
-                });
-
-                if (!generatedImage) {
-                    throw new Error('Error generating summary image');
-                }
-            } catch (imageError) {
-                console.error('Error generating summary image:', imageError);
-                errors.push('Failed to generate summary image');
-            }
-
-            console.log('successCount', successCount);
-            console.log('errorCount', errorCount);
-            console.log('errors', errors);
 
             //success response
             return res
@@ -140,18 +143,21 @@ const countriesDataController = {
                 }));
 
         } catch (error) {
-            console.error('Critical error in refresh process:', error); //log specific error
-            return res.status(HttpStatusCode.InternalServerError).json(errorResponse({ //generic error to client
+            console.error('Critical error in refresh process:', error);
+            return res.status(HttpStatusCode.InternalServerError).json(errorResponse({
                 error: "Internal server error",
             }));
         }
     },
 
     getCountries: async (req: Request, res: Response) => {
+        console.log(new Date().toISOString());
+        console.log(new Date().toLocaleString());
+        console.log(new Date().toLocaleString('en-US', { timeZone: 'Africa/Lagos' }));
         try {
             const { region, currency, sort } = req.query;
 
-            // Check for invalid query parameters
+            // validate query params
             const allowedParams = ['region', 'currency', 'sort'];
             const invalidParams = Object.keys(req.query).filter(param => !allowedParams.includes(param));
 

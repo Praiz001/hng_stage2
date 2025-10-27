@@ -6,12 +6,12 @@ export async function up(knex: Knex): Promise<void> {
         table.increments('id').primary();
         table.string('name').notNullable().unique();
         table.string('capital').nullable();
-        table.string('region').notNullable();
+        table.string('region').nullable();
         table.bigInteger('population').notNullable();
         table.string('currency_code').nullable();
         table.decimal('exchange_rate', 10, 2).nullable();
         table.decimal('estimated_gdp', 15, 2).nullable();
-        table.string('flag_url').notNullable();
+        table.string('flag_url').nullable();
         table.string('last_refreshed_at').notNullable();
         table.timestamps(true, true);
     });
