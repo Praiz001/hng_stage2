@@ -104,7 +104,7 @@ const countriesDataService = {
             }
 
             // Apply sorting
-            if (query?.sort === 'gdp_desc') {
+            if (['gdp', 'gdp_desc'].includes(query?.sort || '')) {
                 dbQuery = dbQuery.orderBy('estimated_gdp', 'desc');
             }
 

@@ -151,9 +151,6 @@ const countriesDataController = {
     },
 
     getCountries: async (req: Request, res: Response) => {
-        console.log(new Date().toISOString());
-        console.log(new Date().toLocaleString());
-        console.log(new Date().toLocaleString('en-US', { timeZone: 'Africa/Lagos' }));
         try {
             const { region, currency, sort } = req.query;
 
@@ -175,8 +172,8 @@ const countriesDataController = {
                 currency: Joi.string().messages({
                     'string.base': 'Invalid data type for "currency" (must be string)'
                 }).optional(),
-                sort: Joi.string().valid('gdp_desc').messages({
-                    'string.base': 'Invalid data type for "sort" (must be "gdp_desc")'
+                sort: Joi.string().valid('gdp', 'gdp_desc').lowercase().messages({
+                    'string.base': 'Invalid data type for "sort"'
                 }).optional(),
             });
 
