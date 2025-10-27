@@ -9,11 +9,10 @@ export async function up(knex: Knex): Promise<void> {
         table.string('region').nullable();
         table.bigInteger('population').notNullable();
         table.string('currency_code').nullable();
-        table.decimal('exchange_rate', 10, 2).nullable();
-        table.decimal('estimated_gdp', 15, 2).nullable();
+        table.double('exchange_rate', 10, 2).nullable();
+        table.double('estimated_gdp', 15, 2).nullable();
         table.string('flag_url').nullable();
         table.string('last_refreshed_at').notNullable();
-        table.timestamps(true, true);
     });
 }
 
